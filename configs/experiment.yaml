@@ -1,0 +1,18 @@
+dataset_param:
+  dataset_name: "FashionMNIST"
+  data_dir: "data"
+
+
+shortcut_generation_param:
+  near_zero_intensity_threshold: 10
+  class_colors:
+    - [230, 31, 31]   # Class 0 (T-shirt/top) - Red
+    - [31, 77, 235]   # Class 1 (Trouser) - Blue
+    - [31, 184, 71]   # Class 2 (Pullover) - Green
+    - [242, 199, 26]  # Class 3 (Dress) - Yellow
+    - [140, 51, 199]  # Class 4 (Coat) - Purple
+    - [250, 110, 20]  # Class 5 (Sandal) - Orange
+    - [13, 184, 199]  # Class 6 (Shirt) - Cyan
+    - [235, 77, 158]  # Class 7 (Sneaker) - Pink
+    - [13, 140, 122]  # Class 8 (Bag) - Teal
+    - [140, 89, 46]   # Class 9 (Ankle boot) - Brown
