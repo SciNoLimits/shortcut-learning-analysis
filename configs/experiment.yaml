@@ -1,6 +1,7 @@
 dataset_param:
   dataset_name: "FashionMNIST"
   data_dir: "data"
+  processed_data_dir: "data/FashionMNIST/processed"
 
 
 shortcut_generation_param:
