@@ -1,3 +1,6 @@
+seed: 37
+
+
 dataset_param:
   dataset_name: "FashionMNIST"
   data_dir: "data"
@@ -17,3 +20,9 @@ shortcut_generation_param:
     - [235, 77, 158]  # Class 7 (Sneaker) - Pink
     - [13, 140, 122]  # Class 8 (Bag) - Teal
     - [140, 89, 46]   # Class 9 (Ankle boot) - Brown
+
+  correlation_strengths:
+    - 1.0
+    - 0.9
+    - 0.7
+    - 0.1
