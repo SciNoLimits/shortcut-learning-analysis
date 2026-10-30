@@ -105,3 +105,31 @@ def background_cue(
     transformed_image[near_zero_pixels] = selected_colour
 
     return transformed_image, label, cue_was_correct
+
+
+def apply_controlled_background(
+    grayscale_image,
+    cue_class,
+    class_colors_array,
+    near_zero_intensity_threshold
+):
+    """
+    Apply a specific class colour to the background pixels.
+
+    """
+
+    image = np.asarray(grayscale_image)
+
+    if image.ndim != 2:
+        raise ValueError("Expected a 2D grayscale image.")
+
+    if not 0 <= cue_class < len(class_colors_array):
+        raise ValueError("Invalid cue_class.")
+
+    rgb_image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
+
+    background_mask = image < near_zero_intensity_threshold
+
+    rgb_image[background_mask] = class_colors_array[cue_class]
+
+    return rgb_image.astype(np.uint8)
