@@ -26,3 +26,14 @@ shortcut_generation_param:
     - 0.9
     - 0.7
     - 0.1
+
+training_param:
+  batch_size: 64
+  epochs: 10
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  optimizer: "Adam"
+  loss_function: "CrossEntropyLoss"
+  num_classes: 10
+  validation_split: 0.1
+  num_workers: 2
