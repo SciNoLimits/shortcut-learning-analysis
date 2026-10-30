@@ -184,8 +184,123 @@ def get_predictions(model, data_loader, device):
     return np.concatenate(all_predictions)
 
 
+def calculate_prediction_stability(predictions_by_condition):
 
+    conditions = list(predictions_by_condition.keys())
+
+    # Stack predictions: (4 conditions, 10000 images)
+    predictions = np.stack([
+        predictions_by_condition[condition]
+        for condition in conditions
+    ])
+
+    # All four predictions must agree
+    exact_consistency = np.all(
+        predictions == predictions[0],
+        axis=0
+    ).mean() * 100
+
+    # Calculate agreement for all six condition pairs
+    pairwise_agreements = []
+
+    for i in range(len(conditions)):
+        for j in range(i + 1, len(conditions)):
+
+            agreement = (
+                predictions[i] == predictions[j]
+            ).mean() * 100
+
+            pairwise_agreements.append(agreement)
+
+    average_agreement = np.mean(pairwise_agreements)
+
+    return exact_consistency, average_agreement
+
+
+def run_stability_analysis():
+
+    config = load_config()
+
+    batch_size = config["training_param"]["batch_size"]
+    num_workers = config["training_param"]["num_workers"]
+
+    device = torch.device(
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
+
+    strengths = [1.0, 0.9, 0.7, 0.1]
+
+    results = {}
+
+    print(f"Stability analysis device: {device}")
+
+    # Load all test datasets once
+    test_loaders = {}
+
+    for strength in strengths:
+
+        images, labels = load_test_dataset(strength)
+
+        dataset = TensorDataset(images, labels)
+
+        test_loaders[strength] = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers
+        )
+
+    # Evaluate each trained model
+    for train_strength in strengths:
+
+        model = load_model(train_strength, device)
+
+        predictions_by_condition = {}
+
+        for test_strength in strengths:
+
+            predictions = get_predictions(
+                model,
+                test_loaders[test_strength],
+                device
+            )
+
+            predictions_by_condition[test_strength] = predictions
+
+        exact, pairwise = calculate_prediction_stability(
+            predictions_by_condition
+        )
+
+        percentage = int(train_strength * 100)
+
+        results[f"Train_{percentage}%"] = {
+            "Exact_Consistency": exact,
+            "Pairwise_Agreement": pairwise
+        }
+
+        print(
+            f"Train {percentage}% | "
+            f"Exact Consistency: {exact:.2f}% | "
+            f"Pairwise Agreement: {pairwise:.2f}%"
+        )
+
+        del model
+
+    results_df = pd.DataFrame(results).T
+
+    output_dir = PROJECT_ROOT / "results"
+    output_dir.mkdir(exist_ok=True)
+
+    results_df.to_csv(
+        output_dir / "prediction_stability.csv"
+    )
+
+    print("\nPrediction stability results:")
+    print(results_df.round(2))
+
+    print("\nSaved to results/prediction_stability.csv")
 
 
 if __name__ == "__main__":
-    run_evaluation()
+    # run_evaluation()
+    run_stability_analysis()
