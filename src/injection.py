@@ -222,3 +222,45 @@ def border_cue(
     ] = rgb_image
 
     return padded_image, label, cue_was_correct
+
+
+def apply_controlled_border(
+    image,
+    cue_class,
+    class_colors_array,
+    border_width=2
+):
+    """
+    Apply a selected class colour to the border while preserving
+    the original Fashion-MNIST image exactly in the centre.
+    """
+
+    image = np.asarray(image, dtype=np.uint8)
+
+    if image.shape != (28, 28):
+        raise ValueError(f"Expected image shape (28, 28), got {image.shape}")
+
+    if not 0 <= cue_class < len(class_colors_array):
+        raise ValueError(f"Invalid cue class: {cue_class}")
+
+    if border_width < 1:
+        raise ValueError("Border width must be at least 1.")
+
+    colour = np.asarray(class_colors_array[cue_class], dtype=np.uint8)
+
+    padded_size = 28 + 2 * border_width
+
+    # Create the RGB canvas using the selected border colour.
+    output = np.empty((padded_size, padded_size, 3), dtype=np.uint8)
+    output[:] = colour
+
+    # Convert the original grayscale image to RGB.
+    rgb_image = np.repeat(image[:, :, np.newaxis], 3, axis=2)
+
+    # Insert the original image without modifying its pixels.
+    output[
+        border_width:border_width + 28,
+        border_width:border_width + 28
+    ] = rgb_image
+
+    return output
