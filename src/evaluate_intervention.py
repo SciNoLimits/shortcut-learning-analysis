@@ -6,15 +6,10 @@ from torch.utils.data import Dataset, DataLoader
 
 from src.model import FashionCNN
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 INTERVENTION_DIR = (
-    PROJECT_ROOT
-    / "data"
-    / "FashionMNIST"
-    / "processed"
-    / "controlled_intervention"
+    PROJECT_ROOT / "data" / "FashionMNIST" / "processed" / "controlled_intervention"
 )
 
 MODEL_DIR = PROJECT_ROOT / "models"
@@ -24,13 +19,10 @@ class InterventionDataset(Dataset):
 
     def __init__(self):
         self.images = np.load(
-            INTERVENTION_DIR / "intervention_images.npy",
-            mmap_mode="r"
+            INTERVENTION_DIR / "intervention_images.npy", mmap_mode="r"
         )
 
-        self.labels = np.load(
-            INTERVENTION_DIR / "intervention_labels.npy"
-        )
+        self.labels = np.load(INTERVENTION_DIR / "intervention_labels.npy")
 
     def __len__(self):
         return len(self.labels) * 10
@@ -48,20 +40,15 @@ class InterventionDataset(Dataset):
 
         return image, label, cue_class, image_index
 
+
 def load_model(correlation_strength, device):
     percentage = int(correlation_strength * 100)
 
-    checkpoint_path = (
-        MODEL_DIR / f"model_correlation_{percentage}.pth"
-    )
+    checkpoint_path = MODEL_DIR / f"model_correlation_{percentage}.pth"
 
     model = FashionCNN(num_classes=10).to(device)
 
-    checkpoint = torch.load(
-        checkpoint_path,
-        map_location=device,
-        weights_only=True
-    )
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
 
     model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
@@ -113,22 +100,17 @@ def load_model(correlation_strength, device):
 #         "prediction_consistency": prediction_consistency
 #     }
 
+
 def evaluate_interventions(model, data_loader, device):
 
     num_images = 10000
     num_classes = 10
 
-    predictions = np.empty(
-        (num_images, num_classes), dtype=np.int64
-    )
+    predictions = np.empty((num_images, num_classes), dtype=np.int64)
 
-    true_class_probs = np.empty(
-        (num_images, num_classes), dtype=np.float32
-    )
+    true_class_probs = np.empty((num_images, num_classes), dtype=np.float32)
 
-    cue_class_probs = np.empty(
-        (num_images, num_classes), dtype=np.float32
-    )
+    cue_class_probs = np.empty((num_images, num_classes), dtype=np.float32)
 
     with torch.no_grad():
 
@@ -154,9 +136,9 @@ def evaluate_interventions(model, data_loader, device):
                     batch_probabilities[i, labels[i]]
                 )
 
-                cue_class_probs[image_indices[i], cue_classes[i]] = (
-                    batch_probabilities[i, cue_classes[i]]
-                )
+                cue_class_probs[image_indices[i], cue_classes[i]] = batch_probabilities[
+                    i, cue_classes[i]
+                ]
 
     results = []
 
@@ -168,25 +150,28 @@ def evaluate_interventions(model, data_loader, device):
 
         cue_following = np.mean(predicted == cue_class)
 
-        mean_true_probability = np.mean(
-            true_class_probs[:, cue_class]
+        mean_true_probability = np.mean(true_class_probs[:, cue_class])
+
+        mean_cue_probability = np.mean(cue_class_probs[:, cue_class])
+
+        mismatched_mask = data_loader.dataset.labels != cue_class
+
+        mismatched_cue_following = np.mean(predicted[mismatched_mask] == cue_class)
+
+        results.append(
+            {
+                "background_class": cue_class,
+                "object_accuracy": true_accuracy * 100,
+                "cue_following_rate": cue_following * 100,
+                "mean_true_class_probability": mean_true_probability * 100,
+                "mean_cue_class_probability": mean_cue_probability * 100,
+                "mismatched_cue_following_rate": mismatched_cue_following * 100,
+            }
         )
 
-        mean_cue_probability = np.mean(
-            cue_class_probs[:, cue_class]
-        )
-
-        results.append({
-            "background_class": cue_class,
-            "object_accuracy": true_accuracy * 100,
-            "cue_following_rate": cue_following * 100,
-            "mean_true_class_probability": mean_true_probability * 100,
-            "mean_cue_class_probability": mean_cue_probability * 100
-        })
-
-    exact_consistency = np.mean(
-        np.all(predictions == predictions[:, [0]], axis=1)
-    ) * 100
+    exact_consistency = (
+        np.mean(np.all(predictions == predictions[:, [0]], axis=1)) * 100
+    )
 
     return results, exact_consistency
 
@@ -256,24 +241,18 @@ def evaluate_interventions(model, data_loader, device):
 # if __name__ == "__main__":
 #     run_intervention_evaluation()
 
+
 def run_intervention_evaluation():
 
     import pandas as pd
 
-    device = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     print("Using device:", device)
 
     dataset = InterventionDataset()
 
-    data_loader = DataLoader(
-        dataset,
-        batch_size=128,
-        shuffle=False,
-        num_workers=0
-    )
+    data_loader = DataLoader(dataset, batch_size=128, shuffle=False, num_workers=0)
 
     strengths = [1.0, 0.9, 0.7, 0.1]
 
@@ -288,38 +267,34 @@ def run_intervention_evaluation():
 
         model = load_model(strength, device)
 
-        colour_results, consistency = evaluate_interventions(
-            model,
-            data_loader,
-            device
-        )
+        colour_results, consistency = evaluate_interventions(model, data_loader, device)
 
         # Store per-colour results
         for result in colour_results:
-            all_colour_results.append({
-                "training_strength": percentage,
-                **result
-            })
+            all_colour_results.append({"training_strength": percentage, **result})
 
         # Calculate overall metrics
-        summary_results.append({
-            "training_strength": percentage,
-            "object_accuracy": np.mean([
-                r["object_accuracy"] for r in colour_results
-            ]),
-            "cue_following_rate": np.mean([
-                r["cue_following_rate"] for r in colour_results
-            ]),
-            "mean_true_class_probability": np.mean([
-                r["mean_true_class_probability"]
-                for r in colour_results
-            ]),
-            "mean_cue_class_probability": np.mean([
-                r["mean_cue_class_probability"]
-                for r in colour_results
-            ]),
-            "prediction_consistency": consistency
-        })
+        summary_results.append(
+            {
+                "training_strength": percentage,
+                "object_accuracy": np.mean(
+                    [r["object_accuracy"] for r in colour_results]
+                ),
+                "cue_following_rate": np.mean(
+                    [r["cue_following_rate"] for r in colour_results]
+                ),
+                "mean_true_class_probability": np.mean(
+                    [r["mean_true_class_probability"] for r in colour_results]
+                ),
+                "mean_cue_class_probability": np.mean(
+                    [r["mean_cue_class_probability"] for r in colour_results]
+                ),
+                "mismatched_cue_following_rate": np.mean(
+                    [r["mismatched_cue_following_rate"] for r in colour_results]
+                ),
+                "prediction_consistency": consistency,
+            }
+        )
 
         print(f"Prediction consistency: {consistency:.2f}%")
 
@@ -331,15 +306,9 @@ def run_intervention_evaluation():
     colour_df = pd.DataFrame(all_colour_results)
     summary_df = pd.DataFrame(summary_results)
 
-    colour_df.to_csv(
-        results_dir / "per_colour_intervention_results.csv",
-        index=False
-    )
+    colour_df.to_csv(results_dir / "per_colour_intervention_results.csv", index=False)
 
-    summary_df.to_csv(
-        results_dir / "intervention_summary_results.csv",
-        index=False
-    )
+    summary_df.to_csv(results_dir / "intervention_summary_results.csv", index=False)
 
     print("\nPer-colour results:")
     print(colour_df.to_string(index=False))
