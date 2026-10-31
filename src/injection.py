@@ -133,3 +133,80 @@ def apply_controlled_background(
     rgb_image[background_mask] = class_colors_array[cue_class]
 
     return rgb_image.astype(np.uint8)
+
+
+def border_cue(
+    grayscale_image,
+    label,
+    correlation_strength,
+    class_colors_array,
+    border_width=2,
+    rng=None
+):
+
+    """
+    Apply a border cue to the image.
+
+
+    Args:
+        grayscale_image: A 2D numpy array representing a grayscale image.
+        label: The true class label of the image.
+        correlation_strength: The probability that the border colour will match the true label.
+        class_colors_array: An array of RGB colours for each class.
+        border_width: The width of the border to apply.
+        rng: A random number generator.
+
+    Returns:
+        A tuple containing the transformed image, the true label, and a boolean indicating whether the cue was correct.
+
+    Raises:
+        ValueError: If any of the input parameters are invalid.
+
+    """
+    image = np.asarray(grayscale_image)
+
+    if image.ndim != 2:
+        raise ValueError("Expected a 2D grayscale image.")
+
+    if not 0 <= label < len(class_colors_array):
+        raise ValueError("Invalid label.")
+
+    if not 0 <= correlation_strength <= 1:
+        raise ValueError("Correlation strength must be between 0 and 1.")
+
+    if border_width < 1 or border_width * 2 >= min(image.shape):
+        raise ValueError("Invalid border width.")
+
+    if rng is None:
+        rng = np.random.default_rng()
+
+    # Select the border colour
+    if rng.random() < correlation_strength:
+        cue_class = label
+        cue_was_correct = True
+    else:
+        incorrect_classes = [
+            class_id
+            for class_id in range(len(class_colors_array))
+            if class_id != label
+        ]
+
+        cue_class = rng.choice(incorrect_classes)
+        cue_was_correct = False
+
+    # Convert grayscale to RGB
+    rgb_image = np.repeat(
+        image[:, :, np.newaxis],
+        3,
+        axis=2
+    )
+
+    border_color = class_colors_array[cue_class]
+
+    # Apply border to all four edges
+    rgb_image[:border_width, :, :] = border_color
+    rgb_image[-border_width:, :, :] = border_color
+    rgb_image[:, :border_width, :] = border_color
+    rgb_image[:, -border_width:, :] = border_color
+
+    return rgb_image.astype(np.uint8), label, cue_was_correct
