@@ -103,7 +103,7 @@ def load_model(correlation_strength, device):
 
 def evaluate_interventions(model, data_loader, device):
 
-    num_images = 10000
+    num_images = len(data_loader.dataset.labels)
     num_classes = 10
 
     predictions = np.empty((num_images, num_classes), dtype=np.int64)
