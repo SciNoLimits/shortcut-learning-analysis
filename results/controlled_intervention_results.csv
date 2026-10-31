@@ -1,0 +1,5 @@
+training_strength,object_accuracy,cue_following_rate,prediction_consistency
+100,11.976,92.956,0.01
+90,78.326,20.791,41.980000000000004
+70,86.349,15.199,64.13
+10,90.337,9.945,91.16
