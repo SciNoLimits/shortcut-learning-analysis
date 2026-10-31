@@ -174,8 +174,8 @@ def border_cue(
     if not 0 <= correlation_strength <= 1:
         raise ValueError("Correlation strength must be between 0 and 1.")
 
-    if border_width < 1 or border_width * 2 >= min(image.shape):
-        raise ValueError("Invalid border width.")
+    if border_width < 1:
+        raise ValueError("Border width must be at least 1.")
 
     if rng is None:
         rng = np.random.default_rng()
@@ -194,19 +194,31 @@ def border_cue(
         cue_class = rng.choice(incorrect_classes)
         cue_was_correct = False
 
-    # Convert grayscale to RGB
+    # Convert original grayscale image to RGB
     rgb_image = np.repeat(
         image[:, :, np.newaxis],
         3,
         axis=2
     )
 
-    border_color = class_colors_array[cue_class]
+    height, width = image.shape
 
-    # Apply border to all four edges
-    rgb_image[:border_width, :, :] = border_color
-    rgb_image[-border_width:, :, :] = border_color
-    rgb_image[:, :border_width, :] = border_color
-    rgb_image[:, -border_width:, :] = border_color
+    # Create a larger image with the selected border colour
+    padded_image = np.empty(
+        (
+            height + 2 * border_width,
+            width + 2 * border_width,
+            3
+        ),
+        dtype=np.uint8
+    )
 
-    return rgb_image.astype(np.uint8), label, cue_was_correct
+    padded_image[:] = class_colors_array[cue_class]
+
+    # Insert the complete original image into the centre
+    padded_image[
+        border_width:border_width + height,
+        border_width:border_width + width
+    ] = rgb_image
+
+    return padded_image, label, cue_was_correct
