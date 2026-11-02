@@ -3,3 +3,10 @@ __pycache__/
 .venv/
 data/
 .ipynb_checkpoints/
+
+*.aux
+*.gz
+*.pdf
+*.log
+*.fls
+*.fdb_latexmk
